@@ -176,7 +176,7 @@ export default function ReportList() {
       {/* 検索フォーム */}
       <form onSubmit={handleSearch} className="bg-white p-4 rounded-lg shadow mb-6">
         <h2 className="text-sm font-medium text-gray-700 mb-3">検索条件</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">作業日（開始）</label>
             <input
@@ -195,6 +195,8 @@ export default function ReportList() {
               className="w-full border rounded px-3 py-2 text-sm"
             />
           </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm text-gray-600 mb-1">顧客名</label>
             <input
