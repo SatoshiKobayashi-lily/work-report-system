@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "reports" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "work_date" DATETIME NOT NULL,
+    "id" SERIAL NOT NULL,
+    "work_date" TIMESTAMP(3) NOT NULL,
     "worker_name" TEXT NOT NULL,
     "customer_name" TEXT NOT NULL,
     "site_address" TEXT NOT NULL,
@@ -15,8 +15,10 @@ CREATE TABLE "reports" (
     "start_time" TEXT NOT NULL,
     "end_time" TEXT NOT NULL,
     "break_minutes" INTEGER NOT NULL,
-    "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" DATETIME NOT NULL
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "reports_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
