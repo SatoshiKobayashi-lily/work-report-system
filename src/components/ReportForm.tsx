@@ -65,7 +65,7 @@ export default function ReportForm({ initialData, mode }: Props) {
     customerName: initialData?.customerName || "",
     siteAddress: initialData?.siteAddress || "",
     serialNumber: removePrefix(initialData?.serialNumber, "TM-"),
-    workType: (initialData?.workType as WorkType) || "inspection",
+    workType: (initialData?.workType as WorkType) || "adjustment",
     workTypeOther: initialData?.workTypeOther || "",
     hasFaultCode: initialData?.hasFaultCode || false,
     faultCodeContent: initialData?.faultCodeContent || "",
@@ -393,21 +393,21 @@ export default function ReportForm({ initialData, mode }: Props) {
                     <input
                       type="radio"
                       name="hasFaultCode"
-                      checked={!formData.hasFaultCode}
-                      onChange={() => handleFaultCodeChange(false)}
-                      className="mr-2"
-                    />
-                    なし
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="hasFaultCode"
                       checked={formData.hasFaultCode}
                       onChange={() => handleFaultCodeChange(true)}
                       className="mr-2"
                     />
                     あり
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="hasFaultCode"
+                      checked={!formData.hasFaultCode}
+                      onChange={() => handleFaultCodeChange(false)}
+                      className="mr-2"
+                    />
+                    なし
                   </label>
                 </div>
               </div>
@@ -484,7 +484,8 @@ export default function ReportForm({ initialData, mode }: Props) {
                   value={formData.partQuantity ?? ""}
                   onChange={handleChange}
                   min={1}
-                  className={`w-full border rounded px-3 py-2 ${
+                  max={99999}
+                  className={`w-24 border rounded px-3 py-2 ${
                     getError("partQuantity") ? "border-red-500" : ""
                   }`}
                   placeholder="1"
