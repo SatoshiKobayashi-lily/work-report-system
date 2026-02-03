@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateReport } from "@/lib/validations";
+import { notifySlackFaultCode } from "@/lib/slack";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -75,6 +76,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ errors }, { status: 400 });
     }
 
+    // フォルトコードが追加されたかチェック（以前なし → 今回あり）
+    const faultCodeAdded = !existingReport.hasFaultCode && body.hasFaultCode;
+
     // レポート更新
     const report = await prisma.report.update({
       where: { id: reportId },
@@ -95,6 +99,21 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         breakMinutes: parseInt(body.breakMinutes, 10),
       },
     });
+
+    // フォルトコードが追加された場合、Slack通知
+    if (faultCodeAdded) {
+      await notifySlackFaultCode(
+        {
+          id: report.id,
+          workDate: report.workDate.toISOString().split("T")[0],
+          workerName: report.workerName,
+          customerName: report.customerName,
+          serialNumber: report.serialNumber,
+          faultCodeContent: report.faultCodeContent,
+        },
+        false
+      );
+    }
 
     return NextResponse.json({
       ...report,

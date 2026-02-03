@@ -1,10 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Report, WORK_TYPES, WorkType, ReportFormData } from "@/types/report";
 import { validateReport, ValidationError } from "@/lib/validations";
+
+interface SerialNumberMaster {
+  id: number;
+  serialNumber: string;
+  customerName: string | null;
+  description: string | null;
+}
+
+interface PartNumberMaster {
+  id: number;
+  partNumber: string;
+  partName: string | null;
+  description: string | null;
+}
 
 interface Props {
   initialData?: Report;
@@ -15,18 +29,47 @@ export default function ReportForm({ initialData, mode }: Props) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<ValidationError[]>([]);
+  const [serialNumberMasters, setSerialNumberMasters] = useState<SerialNumberMaster[]>([]);
+  const [partNumberMasters, setPartNumberMasters] = useState<PartNumberMaster[]>([]);
+
+  // マスタデータの取得
+  useEffect(() => {
+    const fetchMasters = async () => {
+      try {
+        const [serialRes, partRes] = await Promise.all([
+          fetch("/api/masters/serial-numbers"),
+          fetch("/api/masters/part-numbers"),
+        ]);
+        if (serialRes.ok) {
+          setSerialNumberMasters(await serialRes.json());
+        }
+        if (partRes.ok) {
+          setPartNumberMasters(await partRes.json());
+        }
+      } catch (error) {
+        console.error("Failed to fetch masters:", error);
+      }
+    };
+    fetchMasters();
+  }, []);
+
+  // プレフィックスを除去してフォーム用の値を取得
+  const removePrefix = (value: string | undefined, prefix: string) => {
+    if (!value) return "";
+    return value.startsWith(prefix) ? value.slice(prefix.length) : value;
+  };
 
   const [formData, setFormData] = useState<ReportFormData>({
     workDate: initialData?.workDate || new Date().toISOString().split("T")[0],
     workerName: initialData?.workerName || "",
     customerName: initialData?.customerName || "",
     siteAddress: initialData?.siteAddress || "",
-    serialNumber: initialData?.serialNumber || "",
+    serialNumber: removePrefix(initialData?.serialNumber, "TM-"),
     workType: (initialData?.workType as WorkType) || "inspection",
     workTypeOther: initialData?.workTypeOther || "",
     hasFaultCode: initialData?.hasFaultCode || false,
     faultCodeContent: initialData?.faultCodeContent || "",
-    partNumber: initialData?.partNumber || "",
+    partNumber: removePrefix(initialData?.partNumber, "NF-"),
     partQuantity: initialData?.partQuantity || undefined,
     startTime: initialData?.startTime || "09:00",
     endTime: initialData?.endTime || "17:00",
@@ -76,11 +119,32 @@ export default function ReportForm({ initialData, mode }: Props) {
     setErrors((prev) => prev.filter((e) => e.field !== "hasFaultCode"));
   };
 
+  // シリアルナンバー選択時に顧客名を自動入力
+  const handleSerialNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, serialNumber: value }));
+    setErrors((prev) => prev.filter((err) => err.field !== "serialNumber"));
+
+    // マスタから顧客名を取得して自動入力
+    const fullSerialNumber = `TM-${value}`;
+    const master = serialNumberMasters.find((m) => m.serialNumber === fullSerialNumber);
+    if (master?.customerName && !formData.customerName) {
+      setFormData((prev) => ({ ...prev, serialNumber: value, customerName: master.customerName || "" }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // プレフィックスを付けた送信用データを作成
+    const submitData = {
+      ...formData,
+      serialNumber: formData.serialNumber ? `TM-${formData.serialNumber}` : "",
+      partNumber: formData.partNumber ? `NF-${formData.partNumber}` : "",
+    };
+
     // バリデーション
-    const validationErrors = validateReport(formData);
+    const validationErrors = validateReport(submitData);
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
       return;
@@ -98,7 +162,7 @@ export default function ReportForm({ initialData, mode }: Props) {
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const data = await response.json();
@@ -225,17 +289,32 @@ export default function ReportForm({ initialData, mode }: Props) {
               <div>
                 <label className="block text-sm text-gray-600 mb-1">
                   シリアルナンバー <span className="text-red-500">*</span>
+                  <span className="text-gray-400 font-normal ml-2">（6桁・選択または入力）</span>
                 </label>
-                <input
-                  type="text"
-                  name="serialNumber"
-                  value={formData.serialNumber}
-                  onChange={handleChange}
-                  className={`w-full border rounded px-3 py-2 font-mono ${
-                    getError("serialNumber") ? "border-red-500" : ""
-                  }`}
-                  placeholder="TM-012345"
-                />
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 py-2 text-sm font-mono text-gray-700 bg-gray-100 border border-r-0 rounded-l">
+                    TM-
+                  </span>
+                  <input
+                    type="text"
+                    name="serialNumber"
+                    value={formData.serialNumber}
+                    onChange={handleSerialNumberChange}
+                    maxLength={6}
+                    list="serialNumberList"
+                    className={`flex-1 border rounded-r px-3 py-2 font-mono ${
+                      getError("serialNumber") ? "border-red-500" : ""
+                    }`}
+                    placeholder="012345"
+                  />
+                  <datalist id="serialNumberList">
+                    {serialNumberMasters.map((m) => (
+                      <option key={m.id} value={m.serialNumber.replace("TM-", "")}>
+                        {m.customerName} - {m.description}
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
                 {getError("serialNumber") && (
                   <p className="text-red-500 text-sm mt-1">
                     {getError("serialNumber")}
@@ -360,17 +439,32 @@ export default function ReportForm({ initialData, mode }: Props) {
               <div>
                 <label className="block text-sm text-gray-600 mb-1">
                   部品番号
+                  <span className="text-gray-400 font-normal ml-2">（英数字8桁・選択または入力）</span>
                 </label>
-                <input
-                  type="text"
-                  name="partNumber"
-                  value={formData.partNumber}
-                  onChange={handleChange}
-                  className={`w-full border rounded px-3 py-2 font-mono ${
-                    getError("partNumber") ? "border-red-500" : ""
-                  }`}
-                  placeholder="NF-A1B2C3D4"
-                />
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 py-2 text-sm font-mono text-gray-700 bg-gray-100 border border-r-0 rounded-l">
+                    NF-
+                  </span>
+                  <input
+                    type="text"
+                    name="partNumber"
+                    value={formData.partNumber}
+                    onChange={handleChange}
+                    maxLength={8}
+                    list="partNumberList"
+                    className={`flex-1 border rounded-r px-3 py-2 font-mono uppercase ${
+                      getError("partNumber") ? "border-red-500" : ""
+                    }`}
+                    placeholder="A1B2C3D4"
+                  />
+                  <datalist id="partNumberList">
+                    {partNumberMasters.map((m) => (
+                      <option key={m.id} value={m.partNumber.replace("NF-", "")}>
+                        {m.partName} - {m.description}
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
                 {getError("partNumber") && (
                   <p className="text-red-500 text-sm mt-1">
                     {getError("partNumber")}

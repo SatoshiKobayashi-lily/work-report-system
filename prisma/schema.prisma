@@ -36,3 +36,23 @@ model Report {
   @@index([workDate], name: "idx_work_date")
   @@map("reports")
 }
+
+model SerialNumberMaster {
+  id           Int      @id @default(autoincrement())
+  serialNumber String   @unique @map("serial_number")
+  customerName String?  @map("customer_name")
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("serial_number_masters")
+}
+
+model PartNumberMaster {
+  id          Int      @id @default(autoincrement())
+  partNumber  String   @unique @map("part_number")
+  partName    String?  @map("part_name")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("part_number_masters")
+}

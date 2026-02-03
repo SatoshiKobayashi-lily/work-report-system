@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { validateReport } from "@/lib/validations";
+import { notifySlackFaultCode } from "@/lib/slack";
 import { Prisma } from "@prisma/client";
 
 // GET /api/reports - レポート一覧取得
@@ -112,6 +113,21 @@ export async function POST(request: NextRequest) {
         breakMinutes: parseInt(body.breakMinutes, 10),
       },
     });
+
+    // フォルトコードありの場合、Slack通知
+    if (report.hasFaultCode) {
+      await notifySlackFaultCode(
+        {
+          id: report.id,
+          workDate: report.workDate.toISOString().split("T")[0],
+          workerName: report.workerName,
+          customerName: report.customerName,
+          serialNumber: report.serialNumber,
+          faultCodeContent: report.faultCodeContent,
+        },
+        true
+      );
+    }
 
     return NextResponse.json(
       {

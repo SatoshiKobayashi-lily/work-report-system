@@ -28,10 +28,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
       >
         <header className="bg-white shadow-sm border-b">
-          <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <h1 className="text-xl font-bold text-gray-900">
               作業レポート管理システム
             </h1>
+            <div className="flex items-center gap-3">
+              <img src="/logo.jpg" alt="会社ロゴ" className="h-10 w-10" />
+              <span className="text-sm font-medium text-gray-700">
+                ネオフラックス工業株式会社
+              </span>
+            </div>
           </div>
         </header>
         <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>

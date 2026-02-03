@@ -11,6 +11,20 @@ interface Pagination {
   totalPages: number;
 }
 
+interface SerialNumberMaster {
+  id: number;
+  serialNumber: string;
+  customerName: string | null;
+  description: string | null;
+}
+
+interface PartNumberMaster {
+  id: number;
+  partNumber: string;
+  partName: string | null;
+  description: string | null;
+}
+
 export default function ReportList() {
   const [reports, setReports] = useState<Report[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
@@ -26,6 +40,31 @@ export default function ReportList() {
   const [customerName, setCustomerName] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [partNumber, setPartNumber] = useState("");
+
+  // マスタデータ
+  const [serialNumberMasters, setSerialNumberMasters] = useState<SerialNumberMaster[]>([]);
+  const [partNumberMasters, setPartNumberMasters] = useState<PartNumberMaster[]>([]);
+
+  // マスタデータの取得
+  useEffect(() => {
+    const fetchMasters = async () => {
+      try {
+        const [serialRes, partRes] = await Promise.all([
+          fetch("/api/masters/serial-numbers"),
+          fetch("/api/masters/part-numbers"),
+        ]);
+        if (serialRes.ok) {
+          setSerialNumberMasters(await serialRes.json());
+        }
+        if (partRes.ok) {
+          setPartNumberMasters(await partRes.json());
+        }
+      } catch (error) {
+        console.error("Failed to fetch masters:", error);
+      }
+    };
+    fetchMasters();
+  }, []);
 
   // ソート条件
   const [sortBy, setSortBy] = useState("workDate");
@@ -50,8 +89,8 @@ export default function ReportList() {
       });
 
       if (customerName) params.set("customerName", customerName);
-      if (serialNumber) params.set("serialNumber", serialNumber);
-      if (partNumber) params.set("partNumber", partNumber);
+      if (serialNumber) params.set("serialNumber", `TM-${serialNumber}`);
+      if (partNumber) params.set("partNumber", `NF-${partNumber}`);
 
       const response = await fetch(`/api/reports?${params}`);
       const data = await response.json();
@@ -142,24 +181,50 @@ export default function ReportList() {
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 mb-1">シリアルNo</label>
-            <input
-              type="text"
-              value={serialNumber}
-              onChange={(e) => setSerialNumber(e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm"
-              placeholder="TM-"
-            />
+            <label className="block text-sm text-gray-600 mb-1">シリアルナンバー</label>
+            <div className="flex">
+              <span className="inline-flex items-center px-2 py-2 text-sm font-mono text-gray-700 bg-gray-100 border border-r-0 rounded-l">
+                TM-
+              </span>
+              <input
+                type="text"
+                value={serialNumber}
+                onChange={(e) => setSerialNumber(e.target.value)}
+                list="searchSerialNumberList"
+                className="flex-1 border rounded-r px-2 py-2 text-sm font-mono"
+                placeholder="012345"
+              />
+              <datalist id="searchSerialNumberList">
+                {serialNumberMasters.map((m) => (
+                  <option key={m.id} value={m.serialNumber.replace("TM-", "")}>
+                    {m.customerName} - {m.description}
+                  </option>
+                ))}
+              </datalist>
+            </div>
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">部品番号</label>
-            <input
-              type="text"
-              value={partNumber}
-              onChange={(e) => setPartNumber(e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm"
-              placeholder="NF-"
-            />
+            <div className="flex">
+              <span className="inline-flex items-center px-2 py-2 text-sm font-mono text-gray-700 bg-gray-100 border border-r-0 rounded-l">
+                NF-
+              </span>
+              <input
+                type="text"
+                value={partNumber}
+                onChange={(e) => setPartNumber(e.target.value)}
+                list="searchPartNumberList"
+                className="flex-1 border rounded-r px-2 py-2 text-sm font-mono uppercase"
+                placeholder="00001001"
+              />
+              <datalist id="searchPartNumberList">
+                {partNumberMasters.map((m) => (
+                  <option key={m.id} value={m.partNumber.replace("NF-", "")}>
+                    {m.partName} - {m.description}
+                  </option>
+                ))}
+              </datalist>
+            </div>
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-4">
@@ -246,14 +311,11 @@ export default function ReportList() {
                   顧客名
                   <SortIcon field="customerName" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  住所
-                </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort("serialNumber")}
                 >
-                  シリアルNo
+                  シリアルナンバー
                   <SortIcon field="serialNumber" />
                 </th>
                 <th
@@ -266,13 +328,7 @@ export default function ReportList() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   フォルト
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  部品
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  時間
-                </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-32">
                   操作
                 </th>
               </tr>
@@ -289,9 +345,6 @@ export default function ReportList() {
                   </td>
                   <td className="px-4 py-3 text-sm">{report.workerName}</td>
                   <td className="px-4 py-3 text-sm">{report.customerName}</td>
-                  <td className="px-4 py-3 text-sm max-w-xs truncate">
-                    {report.siteAddress}
-                  </td>
                   <td className="px-4 py-3 text-sm font-mono">
                     {report.serialNumber}
                   </td>
@@ -305,30 +358,24 @@ export default function ReportList() {
                       <span className="text-gray-400">なし</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm font-mono">
-                    {report.partNumber || "−"}
-                  </td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">
-                    {report.startTime}〜{report.endTime}
-                  </td>
                   <td
-                    className="px-4 py-3 text-center"
+                    className="px-4 py-3"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Link
-                      href={`/reports/${report.id}/edit`}
-                      className="text-blue-600 hover:text-blue-800 mr-3"
-                      title="編集"
-                    >
-                      ✎
-                    </Link>
-                    <button
-                      onClick={() => setDeleteTarget(report)}
-                      className="text-red-600 hover:text-red-800"
-                      title="削除"
-                    >
-                      🗑
-                    </button>
+                    <div className="flex gap-2 justify-center">
+                      <Link
+                        href={`/reports/${report.id}/edit`}
+                        className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+                      >
+                        編集
+                      </Link>
+                      <button
+                        onClick={() => setDeleteTarget(report)}
+                        className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 transition-colors"
+                      >
+                        削除
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
