@@ -63,26 +63,18 @@ export async function notifySlackFaultCode(
         },
       },
       {
-        type: "actions",
-        elements: [
-          {
-            type: "button",
-            text: {
-              type: "plain_text",
-              text: "レポートを確認する",
-              emoji: true,
-            },
-            url: reportUrl,
-            style: "primary",
-          },
-        ],
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `👉 <${reportUrl}|レポートを確認する>`,
+        },
       },
       {
         type: "context",
         elements: [
           {
             type: "mrkdwn",
-            text: `レポートID: ${report.id} | <${reportUrl}|詳細を開く>`,
+            text: `レポートID: ${report.id}`,
           },
         ],
       },
