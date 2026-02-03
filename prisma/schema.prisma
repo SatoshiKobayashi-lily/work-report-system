@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Report {
+  id               Int      @id @default(autoincrement())
+  workDate         DateTime @map("work_date")
+  workerName       String   @map("worker_name")
+  customerName     String   @map("customer_name")
+  siteAddress      String   @map("site_address")
+  serialNumber     String   @map("serial_number")
+  workType         String   @map("work_type")
+  workTypeOther    String?  @map("work_type_other")
+  hasFaultCode     Boolean  @map("has_fault_code")
+  faultCodeContent String?  @map("fault_code_content")
+  partNumber       String?  @map("part_number")
+  partQuantity     Int?     @map("part_quantity")
+  startTime        String   @map("start_time")
+  endTime          String   @map("end_time")
+  breakMinutes     Int      @map("break_minutes")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([customerName], name: "idx_customer_name")
+  @@index([serialNumber], name: "idx_serial_number")
+  @@index([partNumber], name: "idx_part_number")
+  @@index([workDate], name: "idx_work_date")
+  @@map("reports")
+}
