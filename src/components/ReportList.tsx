@@ -40,6 +40,8 @@ export default function ReportList() {
   const [customerName, setCustomerName] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [partNumber, setPartNumber] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // マスタデータ
   const [serialNumberMasters, setSerialNumberMasters] = useState<SerialNumberMaster[]>([]);
@@ -91,6 +93,8 @@ export default function ReportList() {
       if (customerName) params.set("customerName", customerName);
       if (serialNumber) params.set("serialNumber", `TM-${serialNumber}`);
       if (partNumber) params.set("partNumber", `NF-${partNumber}`);
+      if (dateFrom) params.set("dateFrom", dateFrom);
+      if (dateTo) params.set("dateTo", dateTo);
 
       const response = await fetch(`/api/reports?${params}`);
       const data = await response.json();
@@ -106,7 +110,7 @@ export default function ReportList() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.perPage, sortBy, sortOrder, customerName, serialNumber, partNumber]);
+  }, [pagination.page, pagination.perPage, sortBy, sortOrder, customerName, serialNumber, partNumber, dateFrom, dateTo]);
 
   useEffect(() => {
     fetchReports();
@@ -121,6 +125,8 @@ export default function ReportList() {
     setCustomerName("");
     setSerialNumber("");
     setPartNumber("");
+    setDateFrom("");
+    setDateTo("");
     setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
@@ -161,7 +167,8 @@ export default function ReportList() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("ja-JP");
+    const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"][date.getDay()];
+    return `${date.toLocaleDateString("ja-JP")}（${dayOfWeek}）`;
   };
 
   return (
@@ -169,7 +176,25 @@ export default function ReportList() {
       {/* 検索フォーム */}
       <form onSubmit={handleSearch} className="bg-white p-4 rounded-lg shadow mb-6">
         <h2 className="text-sm font-medium text-gray-700 mb-3">検索条件</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">作業日（開始）</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-600 mb-1">作業日（終了）</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full border rounded px-3 py-2 text-sm"
+            />
+          </div>
           <div>
             <label className="block text-sm text-gray-600 mb-1">顧客名</label>
             <input
@@ -325,9 +350,6 @@ export default function ReportList() {
                   種類
                   <SortIcon field="workType" />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  フォルト
-                </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase w-32">
                   操作
                 </th>
@@ -337,7 +359,11 @@ export default function ReportList() {
               {reports.map((report) => (
                 <tr
                   key={report.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className={`cursor-pointer ${
+                    report.hasFaultCode
+                      ? "bg-red-50 hover:bg-red-100"
+                      : "hover:bg-gray-50"
+                  }`}
                   onClick={() => (window.location.href = `/reports/${report.id}`)}
                 >
                   <td className="px-4 py-3 text-sm whitespace-nowrap">
@@ -350,13 +376,6 @@ export default function ReportList() {
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {WORK_TYPES[report.workType as WorkType]}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    {report.hasFaultCode ? (
-                      <span className="text-red-600">あり</span>
-                    ) : (
-                      <span className="text-gray-400">なし</span>
-                    )}
                   </td>
                   <td
                     className="px-4 py-3"

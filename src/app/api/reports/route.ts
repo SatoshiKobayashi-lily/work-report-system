@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     const customerName = searchParams.get("customerName") || "";
     const serialNumber = searchParams.get("serialNumber") || "";
     const partNumber = searchParams.get("partNumber") || "";
+    const dateFrom = searchParams.get("dateFrom") || "";
+    const dateTo = searchParams.get("dateTo") || "";
     const page = parseInt(searchParams.get("page") || "1", 10);
     const perPage = parseInt(searchParams.get("perPage") || "20", 10);
     const sortBy = searchParams.get("sortBy") || "workDate";
@@ -28,6 +30,18 @@ export async function GET(request: NextRequest) {
     }
     if (partNumber) {
       where.partNumber = { contains: partNumber };
+    }
+    if (dateFrom || dateTo) {
+      const dateFilter: Prisma.DateTimeFilter = {};
+      if (dateFrom) {
+        dateFilter.gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setDate(endDate.getDate() + 1);
+        dateFilter.lt = endDate;
+      }
+      where.workDate = dateFilter;
     }
 
     // ソート条件
